@@ -25,7 +25,7 @@ NOW   = datetime.now(TW)
 RECENT_DATES = [(NOW - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(5)]
 
 API_BASE  = "https://pcc.g0v.ronny.tw/api/searchbriefbydate"
-MIN_SCORE = 6
+MIN_SCORE = 3
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
