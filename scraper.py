@@ -39,9 +39,10 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 async def search_keyword(page, keyword):
     try:
         await page.goto(SEARCH_URL, timeout=30000)
-        await page.wait_for_selector('input[name="Keyword"]', timeout=10000)
-        await page.fill('input[name="Keyword"]', keyword)
-        await page.click('input[type="submit"]')
+        # 用 type="text" 精準定位關鍵字輸入框，避免誤觸 submit 按鈕
+        await page.wait_for_selector('input[name="Keyword"][type="text"]', timeout=10000)
+        await page.fill('input[name="Keyword"][type="text"]', keyword)
+        await page.click('input[type="submit"][value="查詢"]')
         await page.wait_for_load_state("networkidle", timeout=20000)
         rows = await page.query_selector_all("table tr")
         results = []
