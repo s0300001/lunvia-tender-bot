@@ -1,11 +1,6 @@
 """
 LUNVIA 標案情報自動爬蟲 (Gemini 版)
 每天從台灣採購公報網抓取設計相關標案，AI 評分後存入 Notion
-
-環境變數（GitHub Secrets）:
-  GEMINI_API_KEY     - Google Gemini API Key (免費: aistudio.google.com/apikey)
-  NOTION_TOKEN       - Notion Integration Token
-  NOTION_DATABASE_ID - 標案資料庫 ID (bcd72699-c046-4ee7-a78e-57c65e957b07)
 """
 
 import asyncio, json, os, re, time
@@ -26,7 +21,14 @@ GEMINI_API_KEY     = os.environ["GEMINI_API_KEY"]
 NOTION_TOKEN       = os.environ["NOTION_TOKEN"]
 NOTION_DATABASE_ID = os.environ["NOTION_DATABASE_ID"]
 TW    = timezone(timedelta(hours=8))
-TODAY = datetime.now(TW).strftime("%Y/%m/%d")
+NOW   = datetime.now(TW)
+
+# 抓最近 3 天（包含週末補抓）
+RECENT_DATES = set()
+for i in range(3):
+    d = NOW - timedelta(days=i)
+    RECENT_DATES.add(d.strftime("%Y/%m/%d"))
+
 SEARCH_URL = "https://www.taiwanbuying.com.tw/Query_Keyword.ASP"
 MIN_SCORE  = 6
 
@@ -47,7 +49,7 @@ async def search_keyword(page, keyword):
             cells = await row.query_selector_all("td")
             if len(cells) < 3: continue
             date_text = (await cells[0].inner_text()).strip()
-            if TODAY not in date_text: continue
+            if not any(d in date_text for d in RECENT_DATES): continue
             name_el = await cells[1].query_selector("a")
             if not name_el: continue
             name   = (await name_el.inner_text()).strip()
@@ -135,10 +137,11 @@ def save_to_notion(tender, score):
 
 
 async def main():
-    print(f"LUNVIA 標案爬蟲啟動 — {TODAY}")
+    dates_str = ', '.join(sorted(RECENT_DATES))
+    print(f"LUNVIA 標案爬蟲啟動 — 抓最近3天 ({dates_str})")
     tenders = await scrape_all()
     if not tenders:
-        print("今日無新標案"); return
+        print("最近3天無相關標案"); return
     saved = skipped = 0
     for i, tender in enumerate(tenders, 1):
         print(f"[{i}/{len(tenders)}] {tender['name'][:40]}")
